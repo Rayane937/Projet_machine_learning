@@ -8,7 +8,7 @@ st.title("Dashboard de Clustering")
 df_metric = pd.read_excel("output/save_metric.xlsx")
 
 descriptor = st.sidebar.selectbox('Sélectionner un descripteur', 
-    ["HISTOGRAM", "HOG", "HOG_DBSCAN", "HISTOGRAM_DBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN"])
+    ["HISTOGRAM", "HOG", "HOG_DBSCAN", "HISTOGRAM_DBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN", "CNN", "CNN_DBSCAN"])
 
 if descriptor == "HISTOGRAM":
     df = pd.read_excel("output/save_clustering_hist_kmeans.xlsx")
@@ -22,6 +22,10 @@ elif descriptor == "COLOR_HIST":
     df = pd.read_excel("output/save_clustering_color_kmeans.xlsx")
 elif descriptor == "COLOR_HIST_DBSCAN":
     df = pd.read_excel("output/save_clustering_color_dbscan.xlsx")
+elif descriptor == "CNN":
+    df = pd.read_excel("output/save_clustering_cnn_kmeans.xlsx")
+elif descriptor == "CNN_DBSCAN":
+    df = pd.read_excel("output/save_clustering_cnn_dbscan.xlsx")
 
 selected_cluster = st.sidebar.selectbox('Sélectionner un Cluster', range(20))
 filtered_data = df[df['cluster'] == selected_cluster]

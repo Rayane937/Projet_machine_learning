@@ -5,9 +5,11 @@ import pandas as pd
 import numpy as np
 from skimage import io
 from skimage.transform import resize
+from sklearn.metrics import adjusted_mutual_info_score
+from sklearn.cluster import DBSCAN
 
-from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms
-from clustering import KMeans, DBSCAN, show_metric  
+from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms, compute_cnn_descriptors
+from clustering import KMeans, show_metric  
 from utils import conversion_3d, create_df_to_export
 from constant import PATH_OUTPUT, PATH_DATA  
 
@@ -33,6 +35,56 @@ def load_images_and_labels():
 
     return np.array(images), np.array(labels), label_map
 
+
+#chercher les meilleurs parametres pour DBSCAN
+
+def find_best_dbscan_params(X, labels_true, eps_list=None, min_samples_list=None, verbose=True):
+    if eps_list is None:
+        eps_list = [0.1, 0.2, 0.3, 0.4, 0.5,0.6, 0.7, 0.8, 1.2, 1.3, 1.5,2,2.5,3,3.5,4,4.5,5,5.5,6]
+    if min_samples_list is None:
+        min_samples_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    best_score = -1
+    best_params = {}
+    results = []
+
+    for eps in eps_list:
+        for min_samples in min_samples_list:
+            dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+            labels = dbscan.fit_predict(X)
+
+            if len(set(labels)) <= 1 or len(set(labels)) == len(X):
+                continue  # pas de vrai clustering
+
+            score = adjusted_mutual_info_score(labels_true, labels)
+
+            n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+            n_noise = list(labels).count(-1)
+
+            results.append({
+                'eps': eps,
+                'min_samples': min_samples,
+                'ami': score,
+                'clusters': n_clusters,
+                'noise': n_noise
+            })
+
+            if score > best_score:
+                best_score = score
+                best_params = {
+                    'eps': eps,
+                    'min_samples': min_samples,
+                    'ami': score,
+                    'labels': labels,
+                    'n_clusters': n_clusters,
+                    'n_noise': n_noise
+                }
+
+            if verbose:
+                print(f"Test eps={eps}, min_samples={min_samples} → Ami={score:.3f}, clusters={n_clusters}, noise={n_noise}")
+
+    return best_params, results
+
 def pipeline():
     print("Chargement des images...")
     images, labels_true, label_map = load_images_and_labels()
@@ -43,19 +95,20 @@ def pipeline():
     descriptors_hist = compute_gray_histograms(images)
     print("- Extraction des descripteurs de couleur...")
     descriptors_color = compute_color_histograms(images, color_space='HSV')
+    print("- Extraction des descripteurs CNN...")
+    descriptors_cnn = compute_cnn_descriptors(images)
 
-    # Convertir en numpy array
     descriptors_hog = np.array(descriptors_hog)
     descriptors_hist = np.array(descriptors_hist)
     descriptors_color = np.array(descriptors_color)
+    descriptors_cnn = np.array(descriptors_cnn)
 
-    # Normalisation
     scaler = StandardScaler()
     descriptors_hog_norm = scaler.fit_transform(descriptors_hog)
     descriptors_hist_norm = scaler.fit_transform(descriptors_hist)
     descriptors_color_norm = scaler.fit_transform(descriptors_color)
+    descriptors_cnn_norm = scaler.fit_transform(descriptors_cnn)
 
-    # PCA pour réduire les dimensions
     pca_hog = PCA(n_components=3)
     descriptors_hog_pca = pca_hog.fit_transform(descriptors_hog_norm)
 
@@ -65,12 +118,18 @@ def pipeline():
     pca_color = PCA(n_components=3)
     descriptors_color_pca = pca_color.fit_transform(descriptors_color_norm)
 
-    # Vérification des dimensions après PCA
+    pca_cnn = PCA(n_components=3)
+    descriptors_cnn_pca = pca_cnn.fit_transform(descriptors_cnn_norm)
+
+    print("--------------------------------------------------------------------------")
+
     print("Shape avant export (HISTOGRAM):", descriptors_hist_pca.shape)  
     print("Shape avant export (HOG):", descriptors_hog_pca.shape)  
     print("Shape avant export (COLOR_HIST):", descriptors_color_pca.shape)  
+    print("Shape avant export (CNN):", descriptors_cnn_pca.shape)  
 
-    # KMeans
+    print("--------------------------------------------------------------------------")
+
     print("\n- KMeans avec HOG...")
     kmeans_hog = KMeans(n_clusters=20)
     kmeans_hog.fit(descriptors_hog_pca)
@@ -83,51 +142,69 @@ def pipeline():
     kmeans_color = KMeans(n_clusters=20)
     kmeans_color.fit(descriptors_color_pca)
 
-    # DBSCAN
+    print("- KMeans avec CNN...")
+    kmeans_cnn = KMeans(n_clusters=20)
+    kmeans_cnn.fit(descriptors_cnn_pca)
+
+    print("--------------------------------------------------------------------------")
+    print("\n- DBSCAN optimisé avec color...")
+    best_dbscan, all_results = find_best_dbscan_params( descriptors_color_pca, labels_true)
+
+    dbscan_cnn = DBSCAN(eps=3.8, min_samples=7)
+    dbscan_cnn.fit(descriptors_cnn_pca)
+
     print("\n- DBSCAN avec HOG...")
     dbscan_hog = DBSCAN(eps=0.5, min_samples=5)
     dbscan_hog.fit(descriptors_hog_pca)
 
-    print("- DBSCAN avec Histogram...")
+    print("\n- DBSCAN avec Histogram...")
     dbscan_hist = DBSCAN(eps=1, min_samples=5)
     dbscan_hist.fit(descriptors_hist_pca)
 
-    print("- DBSCAN avec Couleur...")
-    dbscan_color = DBSCAN(eps=0.2, min_samples=5)
+    print("\n- DBSCAN avec couleur...")
+    dbscan_color = DBSCAN(eps=best_dbscan['eps'], min_samples=best_dbscan['min_samples'])
     dbscan_color.fit(descriptors_color_pca)
 
-    # Calcul des métriques
+    print("--------------------------------------------------------------------------")
+
     list_dict = [
         show_metric(labels_true, kmeans_hog.labels_, descriptors_hog_pca, name_descriptor="HOG", name_model="kmeans"),
         show_metric(labels_true, kmeans_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM", name_model="kmeans"),
         show_metric(labels_true, kmeans_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST", name_model="kmeans"),
+        show_metric(labels_true, kmeans_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="kmeans"),
+
         show_metric(labels_true, dbscan_hog.labels_, descriptors_hog_pca, name_descriptor="HOG_DBSCAN", name_model="dbscan"),
         show_metric(labels_true, dbscan_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM_DBSCAN", name_model="dbscan"),
-        show_metric(labels_true, dbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_DBSCAN", name_model="dbscan")
+        show_metric(labels_true, dbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_DBSCAN", name_model="dbscan"),
+        show_metric(labels_true, best_dbscan['labels'], descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan")
     ]
 
     df_metric = pd.DataFrame(list_dict)
 
-    # Création des DataFrames pour sauvegarde
     df_hist = create_df_to_export(descriptors_hist_pca, labels_true, kmeans_hist.labels_)
     df_hog = create_df_to_export(descriptors_hog_pca, labels_true, kmeans_hog.labels_)
+    df_color = create_df_to_export(descriptors_color_pca, labels_true, kmeans_color.labels_)
+    df_cnn = create_df_to_export(descriptors_cnn_pca, labels_true, kmeans_cnn.labels_)
+
     df_hist_dbscan = create_df_to_export(descriptors_hist_pca, labels_true, dbscan_hist.labels_)
     df_hog_dbscan = create_df_to_export(descriptors_hog_pca, labels_true, dbscan_hog.labels_)
-    df_color = create_df_to_export(descriptors_color_pca, labels_true, kmeans_color.labels_)
     df_color_dbscan = create_df_to_export(descriptors_color_pca, labels_true, dbscan_color.labels_)
+    df_cnn_dbscan = create_df_to_export(descriptors_cnn_pca, labels_true, best_dbscan['labels'])
 
-    # Création du dossier output s'il n'existe pas
     if not os.path.exists(PATH_OUTPUT):
         os.makedirs(PATH_OUTPUT)
 
-    # Sauvegarde des fichiers Excel
     print("- Sauvegarde des fichiers Excel...")
     df_hist.to_excel(f"{PATH_OUTPUT}/save_clustering_hist_kmeans.xlsx", index=False)
     df_hog.to_excel(f"{PATH_OUTPUT}/save_clustering_hog_kmeans.xlsx", index=False)
+    df_color.to_excel(f"{PATH_OUTPUT}/save_clustering_color_kmeans.xlsx", index=False)
+    df_cnn.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_kmeans.xlsx", index=False)
+
     df_hist_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hist_dbscan.xlsx", index=False)
     df_hog_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hog_dbscan.xlsx", index=False)
-    df_color.to_excel(f"{PATH_OUTPUT}/save_clustering_color_kmeans.xlsx", index=False)
     df_color_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_color_dbscan.xlsx", index=False)
+    df_cnn_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_dbscan.xlsx", index=False)
+
     df_metric.to_excel(f"{PATH_OUTPUT}/save_metric.xlsx", index=False)
 
     print("Export terminé.")
