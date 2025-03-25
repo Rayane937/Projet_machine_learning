@@ -8,7 +8,7 @@ from skimage.transform import resize
 from sklearn.metrics import adjusted_mutual_info_score
 from sklearn.cluster import DBSCAN
 
-from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms, compute_cnn_descriptors
+from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms, compute_cnn_descriptors, compute_lbp_descriptors
 from clustering import KMeans, show_metric  
 from utils import conversion_3d, create_df_to_export
 from constant import PATH_OUTPUT, PATH_DATA  
@@ -97,17 +97,24 @@ def pipeline():
     descriptors_color = compute_color_histograms(images, color_space='HSV')
     print("- Extraction des descripteurs CNN...")
     descriptors_cnn = compute_cnn_descriptors(images)
+    print("- Extraction des descripteurs LBP...")
+    descriptors_lbp = compute_lbp_descriptors(images)
+    
 
     descriptors_hog = np.array(descriptors_hog)
     descriptors_hist = np.array(descriptors_hist)
     descriptors_color = np.array(descriptors_color)
     descriptors_cnn = np.array(descriptors_cnn)
+    descriptors_lbp = np.array(descriptors_lbp)
+
 
     scaler = StandardScaler()
     descriptors_hog_norm = scaler.fit_transform(descriptors_hog)
     descriptors_hist_norm = scaler.fit_transform(descriptors_hist)
     descriptors_color_norm = scaler.fit_transform(descriptors_color)
     descriptors_cnn_norm = scaler.fit_transform(descriptors_cnn)
+    descriptors_lbp_norm = scaler.fit_transform(descriptors_lbp)
+
 
     pca_hog = PCA(n_components=3)
     descriptors_hog_pca = pca_hog.fit_transform(descriptors_hog_norm)
@@ -120,6 +127,10 @@ def pipeline():
 
     pca_cnn = PCA(n_components=3)
     descriptors_cnn_pca = pca_cnn.fit_transform(descriptors_cnn_norm)
+
+    pca_lbp = PCA(n_components=3)
+    descriptors_lbp_pca = pca_lbp.fit_transform(descriptors_lbp_norm)
+
 
     print("--------------------------------------------------------------------------")
 
@@ -146,6 +157,11 @@ def pipeline():
     kmeans_cnn = KMeans(n_clusters=20)
     kmeans_cnn.fit(descriptors_cnn_pca)
 
+    print("- KMeans avec LBP...")
+    kmeans_lbp = KMeans(n_clusters=20)
+    kmeans_lbp.fit(descriptors_lbp_pca)
+
+
     print("--------------------------------------------------------------------------")
     #pour determiner les meilleurs parametres DBSCAN, nous l'avons deja fait, on ne le refait pas a chaque fois pour que le programme se lance plus vite
     #best_dbscan, all_results = find_best_dbscan_params(descriptors_hog_pca , labels_true)
@@ -166,6 +182,11 @@ def pipeline():
     dbscan_color = DBSCAN(eps=0.5, min_samples=6)
     dbscan_color.fit(descriptors_color_pca)
 
+    print("\n- DBSCAN avec LBP...")
+    dbscan_lbp = DBSCAN(eps=0.5, min_samples=5)
+    dbscan_lbp.fit(descriptors_lbp_pca)
+
+
     print("--------------------------------------------------------------------------")
 
     list_dict = [
@@ -173,11 +194,15 @@ def pipeline():
         show_metric(labels_true, kmeans_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM", name_model="kmeans"),
         show_metric(labels_true, kmeans_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST", name_model="kmeans"),
         show_metric(labels_true, kmeans_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="kmeans"),
+        show_metric(labels_true, kmeans_lbp.labels_, descriptors_lbp_pca, name_descriptor="LBP", name_model="kmeans"),
+
 
         show_metric(labels_true, dbscan_hog.labels_, descriptors_hog_pca, name_descriptor="HOG_DBSCAN", name_model="dbscan"),
         show_metric(labels_true, dbscan_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM_DBSCAN", name_model="dbscan"),
         show_metric(labels_true, dbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_DBSCAN", name_model="dbscan"),
-        show_metric(labels_true, dbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan")
+        show_metric(labels_true, dbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan"),
+        show_metric(labels_true, dbscan_lbp.labels_, descriptors_lbp_pca, name_descriptor="LBP_DBSCAN", name_model="dbscan")
+
     ]
 
     df_metric = pd.DataFrame(list_dict)
@@ -186,11 +211,16 @@ def pipeline():
     df_hog = create_df_to_export(descriptors_hog_pca, labels_true, kmeans_hog.labels_)
     df_color = create_df_to_export(descriptors_color_pca, labels_true, kmeans_color.labels_)
     df_cnn = create_df_to_export(descriptors_cnn_pca, labels_true, kmeans_cnn.labels_)
+    df_lbp = create_df_to_export(descriptors_lbp_pca, labels_true, kmeans_lbp.labels_)
+
+
 
     df_hist_dbscan = create_df_to_export(descriptors_hist_pca, labels_true, dbscan_hist.labels_)
     df_hog_dbscan = create_df_to_export(descriptors_hog_pca, labels_true, dbscan_hog.labels_)
     df_color_dbscan = create_df_to_export(descriptors_color_pca, labels_true, dbscan_color.labels_)
     df_cnn_dbscan = create_df_to_export(descriptors_cnn_pca, labels_true, dbscan_cnn.labels_)
+    df_lbp_dbscan = create_df_to_export(descriptors_lbp_pca, labels_true, dbscan_lbp.labels_)
+
 
     if not os.path.exists(PATH_OUTPUT):
         os.makedirs(PATH_OUTPUT)
@@ -200,11 +230,14 @@ def pipeline():
     df_hog.to_excel(f"{PATH_OUTPUT}/save_clustering_hog_kmeans.xlsx", index=False)
     df_color.to_excel(f"{PATH_OUTPUT}/save_clustering_color_kmeans.xlsx", index=False)
     df_cnn.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_kmeans.xlsx", index=False)
+    df_lbp.to_excel(f"{PATH_OUTPUT}/save_clustering_lbp_kmeans.xlsx", index=False)
 
     df_hist_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hist_dbscan.xlsx", index=False)
     df_hog_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hog_dbscan.xlsx", index=False)
     df_color_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_color_dbscan.xlsx", index=False)
     df_cnn_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_dbscan.xlsx", index=False)
+    df_lbp_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_lbp_dbscan.xlsx", index=False)
+
 
     df_metric.to_excel(f"{PATH_OUTPUT}/save_metric.xlsx", index=False)
 
