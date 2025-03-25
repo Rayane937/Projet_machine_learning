@@ -4,7 +4,7 @@ import numpy as np
 from skimage.feature import hog
 from skimage import transform
 import itertools
-
+from skimage.feature import local_binary_pattern
 import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
