@@ -137,7 +137,8 @@ def pipeline():
     print("Shape avant export (HISTOGRAM):", descriptors_hist_pca.shape)  
     print("Shape avant export (HOG):", descriptors_hog_pca.shape)  
     print("Shape avant export (COLOR_HIST):", descriptors_color_pca.shape)  
-    print("Shape avant export (CNN):", descriptors_cnn_pca.shape)  
+    print("Shape avant export (CNN):", descriptors_cnn_pca.shape)
+    print("Shape avant export (LBP):", descriptors_lbp_pca.shape)
 
     print("--------------------------------------------------------------------------")
 
