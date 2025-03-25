@@ -40,7 +40,7 @@ def load_images_and_labels():
 
 def find_best_dbscan_params(X, labels_true, eps_list=None, min_samples_list=None, verbose=True):
     if eps_list is None:
-        eps_list = [0.1, 0.2, 0.3, 0.4, 0.5,0.6, 0.7, 0.8, 1.2, 1.3, 1.5,2,2.5,3,3.5,4,4.5,5,5.5,6]
+        eps_list = [0.1, 0.2, 0.3, 0.4, 0.5,0.6, 0.7, 0.8, 1.2, 1.3,1.4, 1.5,2,2.5,3,3.5,4,4.5,5,5.5,6]
     if min_samples_list is None:
         min_samples_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
@@ -147,22 +147,23 @@ def pipeline():
     kmeans_cnn.fit(descriptors_cnn_pca)
 
     print("--------------------------------------------------------------------------")
-    print("\n- DBSCAN optimisé avec color...")
-    best_dbscan, all_results = find_best_dbscan_params( descriptors_color_pca, labels_true)
+    #pour determiner les meilleurs parametres DBSCAN, nous l'avons deja fait, on ne le refait pas a chaque fois pour que le programme se lance plus vite
+    #best_dbscan, all_results = find_best_dbscan_params(descriptors_hog_pca , labels_true)
 
+    print("\n- DBSCAN avec CNN...")
     dbscan_cnn = DBSCAN(eps=3.8, min_samples=7)
     dbscan_cnn.fit(descriptors_cnn_pca)
 
     print("\n- DBSCAN avec HOG...")
-    dbscan_hog = DBSCAN(eps=0.5, min_samples=5)
+    dbscan_hog = DBSCAN(eps=0.8, min_samples=3)
     dbscan_hog.fit(descriptors_hog_pca)
 
     print("\n- DBSCAN avec Histogram...")
-    dbscan_hist = DBSCAN(eps=1, min_samples=5)
+    dbscan_hist = DBSCAN(eps=2, min_samples=7)
     dbscan_hist.fit(descriptors_hist_pca)
 
     print("\n- DBSCAN avec couleur...")
-    dbscan_color = DBSCAN(eps=best_dbscan['eps'], min_samples=best_dbscan['min_samples'])
+    dbscan_color = DBSCAN(eps=0.5, min_samples=6)
     dbscan_color.fit(descriptors_color_pca)
 
     print("--------------------------------------------------------------------------")
@@ -176,7 +177,7 @@ def pipeline():
         show_metric(labels_true, dbscan_hog.labels_, descriptors_hog_pca, name_descriptor="HOG_DBSCAN", name_model="dbscan"),
         show_metric(labels_true, dbscan_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM_DBSCAN", name_model="dbscan"),
         show_metric(labels_true, dbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_DBSCAN", name_model="dbscan"),
-        show_metric(labels_true, best_dbscan['labels'], descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan")
+        show_metric(labels_true, dbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan")
     ]
 
     df_metric = pd.DataFrame(list_dict)
@@ -189,7 +190,7 @@ def pipeline():
     df_hist_dbscan = create_df_to_export(descriptors_hist_pca, labels_true, dbscan_hist.labels_)
     df_hog_dbscan = create_df_to_export(descriptors_hog_pca, labels_true, dbscan_hog.labels_)
     df_color_dbscan = create_df_to_export(descriptors_color_pca, labels_true, dbscan_color.labels_)
-    df_cnn_dbscan = create_df_to_export(descriptors_cnn_pca, labels_true, best_dbscan['labels'])
+    df_cnn_dbscan = create_df_to_export(descriptors_cnn_pca, labels_true, dbscan_cnn.labels_)
 
     if not os.path.exists(PATH_OUTPUT):
         os.makedirs(PATH_OUTPUT)
