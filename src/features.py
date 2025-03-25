@@ -63,3 +63,24 @@ def compute_cnn_descriptors(images):
             feat = model(img_tensor).squeeze().numpy()
         descriptors.append(feat)
     return descriptors
+
+# Local Binary Pattern
+def compute_lbp_descriptors(images, radius=1, n_points=8):
+    """
+    Calcule les descripteurs Local Binary Pattern (LBP) pour chaque image.
+    :param images: liste d'images en niveaux de gris
+    :param radius: rayon du voisinage circulaire
+    :param n_points: nombre de points voisins considérés
+    :return: liste des descripteurs LBP sous forme d'histogramme
+    """
+    descriptors = []
+    images = (images / images.max() * 255).astype('uint8')
+
+    for img in images:
+        lbp = local_binary_pattern(img, n_points, radius, method='uniform')  # Calcul du LBP
+        hist, _ = np.histogram(lbp.ravel(), bins=np.arange(0, n_points + 3), range=(0, n_points + 2))
+        hist = hist.astype("float")
+        hist /= hist.sum()  # Normalisation
+        descriptors.append(hist)
+
+    return np.array(descriptors)
