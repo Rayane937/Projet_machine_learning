@@ -7,7 +7,7 @@ from skimage import io
 from skimage.transform import resize
 from sklearn.metrics import adjusted_mutual_info_score
 from sklearn.cluster import DBSCAN
-
+from hdbscan import HDBSCAN
 from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms, compute_cnn_descriptors, compute_lbp_descriptors
 from clustering import KMeans, show_metric  
 from utils import conversion_3d, create_df_to_export
@@ -190,6 +190,31 @@ def pipeline():
 
     print("--------------------------------------------------------------------------")
 
+    
+    print("\n- HDBSCAN avec CNN...")
+    hdbscan_cnn = HDBSCAN(min_cluster_size=5, min_samples=3)
+    hdbscan_cnn.fit(descriptors_cnn_pca)
+
+    print("\n- HDBSCAN avec HOG...")
+    hdbscan_hog = HDBSCAN(min_cluster_size=5, min_samples=3)
+    hdbscan_hog.fit(descriptors_hog_pca)
+
+    print("\n- HDBSCAN avec Histogram...")
+    hdbscan_hist = HDBSCAN(min_cluster_size=5, min_samples=3)
+    hdbscan_hist.fit(descriptors_hist_pca)
+
+    print("\n- HDBSCAN avec couleur...")
+    hdbscan_color = HDBSCAN(min_cluster_size=5, min_samples=3)
+    hdbscan_color.fit(descriptors_color_pca)
+
+    print("\n- HDBSCAN avec LBP...")
+    hdbscan_lbp = HDBSCAN(min_cluster_size=5, min_samples=3)
+    hdbscan_lbp.fit(descriptors_lbp_pca)
+
+    
+    print("--------------------------------------------------------------------------")
+
+    
     list_dict = [
         show_metric(labels_true, kmeans_hog.labels_, descriptors_hog_pca, name_descriptor="HOG", name_model="kmeans"),
         show_metric(labels_true, kmeans_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM", name_model="kmeans"),
@@ -204,6 +229,13 @@ def pipeline():
         show_metric(labels_true, dbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan"),
         show_metric(labels_true, dbscan_lbp.labels_, descriptors_lbp_pca, name_descriptor="LBP_DBSCAN", name_model="dbscan")
 
+
+        show_metric(labels_true, hdbscan_hog.labels_, descriptors_hog_pca, name_descriptor="HOG_HDBSCAN", name_model="hdbscan"),
+        show_metric(labels_true, hdbscan_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM_HDBSCAN", name_model="hdbscan"),
+        show_metric(labels_true, hdbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_HDBSCAN", name_model="hdbscan"),
+        show_metric(labels_true, hdbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN_HDBSCAN", name_model="hdbscan"),
+        show_metric(labels_true, hdbscan_lbp.labels_, descriptors_lbp_pca, name_descriptor="LBP_HDBSCAN", name_model="hdbscan")
+
     ]
 
     df_metric = pd.DataFrame(list_dict)
@@ -215,12 +247,18 @@ def pipeline():
     df_lbp = create_df_to_export(descriptors_lbp_pca, labels_true, kmeans_lbp.labels_)
 
 
-
     df_hist_dbscan = create_df_to_export(descriptors_hist_pca, labels_true, dbscan_hist.labels_)
     df_hog_dbscan = create_df_to_export(descriptors_hog_pca, labels_true, dbscan_hog.labels_)
     df_color_dbscan = create_df_to_export(descriptors_color_pca, labels_true, dbscan_color.labels_)
     df_cnn_dbscan = create_df_to_export(descriptors_cnn_pca, labels_true, dbscan_cnn.labels_)
     df_lbp_dbscan = create_df_to_export(descriptors_lbp_pca, labels_true, dbscan_lbp.labels_)
+
+
+    df_hist_hdbscan = create_df_to_export(descriptors_hist_pca, labels_true, hdbscan_hist.labels_)
+    df_hog_hdbscan = create_df_to_export(descriptors_hog_pca, labels_true, hdbscan_hog.labels_)
+    df_color_hdbscan = create_df_to_export(descriptors_color_pca, labels_true, hdbscan_color.labels_)
+    df_cnn_hdbscan = create_df_to_export(descriptors_cnn_pca, labels_true, hdbscan_cnn.labels_)
+    df_lbp_hdbscan = create_df_to_export(descriptors_lbp_pca, labels_true, hdbscan_lbp.labels_)
 
 
     if not os.path.exists(PATH_OUTPUT):
@@ -238,6 +276,13 @@ def pipeline():
     df_color_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_color_dbscan.xlsx", index=False)
     df_cnn_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_dbscan.xlsx", index=False)
     df_lbp_dbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_lbp_dbscan.xlsx", index=False)
+
+
+    df_hist_hdbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hist_hdbscan.xlsx", index=False)
+    df_hog_hdbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_hog_hdbscan.xlsx", index=False)
+    df_color_hdbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_color_hdbscan.xlsx", index=False)
+    df_cnn_hdbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_cnn_hdbscan.xlsx", index=False)
+    df_lbp_hdbscan.to_excel(f"{PATH_OUTPUT}/save_clustering_lbp_hdbscan.xlsx", index=False)
 
 
     df_metric.to_excel(f"{PATH_OUTPUT}/save_metric.xlsx", index=False)
