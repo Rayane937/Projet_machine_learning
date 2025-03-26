@@ -216,6 +216,7 @@ def pipeline():
 
     
     list_dict = [
+        
         show_metric(labels_true, kmeans_hog.labels_, descriptors_hog_pca, name_descriptor="HOG", name_model="kmeans"),
         show_metric(labels_true, kmeans_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM", name_model="kmeans"),
         show_metric(labels_true, kmeans_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST", name_model="kmeans"),
@@ -229,7 +230,7 @@ def pipeline():
         show_metric(labels_true, dbscan_cnn.labels_, descriptors_cnn_pca, name_descriptor="CNN", name_model="dbscan"),
         show_metric(labels_true, dbscan_lbp.labels_, descriptors_lbp_pca, name_descriptor="LBP_DBSCAN", name_model="dbscan")
 
-
+        
         show_metric(labels_true, hdbscan_hog.labels_, descriptors_hog_pca, name_descriptor="HOG_HDBSCAN", name_model="hdbscan"),
         show_metric(labels_true, hdbscan_hist.labels_, descriptors_hist_pca, name_descriptor="HISTOGRAM_HDBSCAN", name_model="hdbscan"),
         show_metric(labels_true, hdbscan_color.labels_, descriptors_color_pca, name_descriptor="COLOR_HIST_HDBSCAN", name_model="hdbscan"),
