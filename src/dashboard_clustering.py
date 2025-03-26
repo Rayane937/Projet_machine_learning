@@ -8,7 +8,7 @@ st.title("Dashboard de Clustering")
 df_metric = pd.read_excel("output/save_metric.xlsx")
 
 descriptor = st.sidebar.selectbox('Sélectionner un descripteur', 
-    ["HISTOGRAM", "HOG", "HOG_DBSCAN", "HISTOGRAM_DBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN", "CNN", "CNN_DBSCAN", "LBP", "LBP_DBSCAN"])
+    ["HISTOGRAM", "HISTOGRAM_DBSCAN", "HISTOGRAM_HDBSCAN", "HOG", "HOG_DBSCAN", "HOG_HDBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN", "COLOR_HIST_HDBSCAN", "CNN", "CNN_DBSCAN", "CNN_HDBSCAN", "LBP", "LBP_DBSCAN", "LBP_HDBSCAN"])
 
 if descriptor == "HISTOGRAM":
     df = pd.read_excel("output/save_clustering_hist_kmeans.xlsx")
@@ -18,18 +18,28 @@ elif descriptor == "HISTOGRAM_DBSCAN":
     df = pd.read_excel("output/save_clustering_hist_dbscan.xlsx")
 elif descriptor == "HOG_DBSCAN":
     df = pd.read_excel("output/save_clustering_hog_dbscan.xlsx")
+elif descriptor == "HISTOGRAM_HDBSCAN":
+    df = pd.read_excel("output/save_clustering_hist_hdbscan.xlsx")
+elif descriptor == "HOG_HDBSCAN":
+    df = pd.read_excel("output/save_clustering_hog_hdbscan.xlsx")
 elif descriptor == "COLOR_HIST":
     df = pd.read_excel("output/save_clustering_color_kmeans.xlsx")
 elif descriptor == "COLOR_HIST_DBSCAN":
     df = pd.read_excel("output/save_clustering_color_dbscan.xlsx")
+elif descriptor == "COLOR_HIST_HDBSCAN":
+    df = pd.read_excel("output/save_clustering_color_hdbscan.xlsx")
 elif descriptor == "CNN":
     df = pd.read_excel("output/save_clustering_cnn_kmeans.xlsx")
 elif descriptor == "CNN_DBSCAN":
     df = pd.read_excel("output/save_clustering_cnn_dbscan.xlsx")
+elif descriptor == "CNN_HDBSCAN":
+    df = pd.read_excel("output/save_clustering_cnn_hdbscan.xlsx")
 elif descriptor == "LBP":
     df = pd.read_excel("output/save_clustering_lbp_kmeans.xlsx")
 elif descriptor == "LBP_DBSCAN":
     df = pd.read_excel("output/save_clustering_lbp_dbscan.xlsx")
+elif descriptor == "LBP_HDBSCAN":
+    df = pd.read_excel("output/save_clustering_lbp_hdbscan.xlsx")
 
 
 selected_cluster = st.sidebar.selectbox('Sélectionner un Cluster', range(20))
