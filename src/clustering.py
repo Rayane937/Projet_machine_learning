@@ -54,17 +54,3 @@ def show_metric(labels_true, labels_pred, descriptors, name_descriptor="", name_
     ari = adjusted_rand_score(labels_true, labels_pred)
 
     return {"ami": ami, "ari": ari, "silhouette": silhouette, "homogeneity": homogeneity, "completeness": completeness, "v_measure": v_measure, "descriptor": name_descriptor, "name_model": name_model}
-
-# Chargement des métriques
-df_metric = pd.read_excel(PATH_OUTPUT + "/save_metric.xlsx")
-
-# Affichage des scores
-st.header("Évaluation des Clustering")
-st.write(df_metric)
-
-# Affichage des résultats LBP
-st.subheader("Visualisation du clustering LBP")
-df_lbp = pd.read_excel(PATH_OUTPUT + "/save_clustering_lbp_kmeans.xlsx")
-
-fig_lbp = px.scatter_3d(df_lbp, x='x', y='y', z='z', color='Cluster')
-st.plotly_chart(fig_lbp)
