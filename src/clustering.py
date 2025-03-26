@@ -5,6 +5,7 @@ from sklearn.cluster import DBSCAN as SklearnDBSCAN
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import hdbscan
 
 #  KMeans personnalisé
 class KMeans:
@@ -41,6 +42,18 @@ class DBSCAN:
         dbscan = SklearnDBSCAN(eps=self.eps, min_samples=self.min_samples)
         self.labels_ = dbscan.fit_predict(X)
         print(f"Labels DBSCAN générés : {set(self.labels_)}")
+
+# HDBSCAN personnalisé
+class HDBSCAN:
+    def __init__(self, min_cluster_size=5, min_samples=None):
+        self.min_cluster_size = min_cluster_size
+        self.min_samples = min_samples
+        self.labels_ = None
+
+    def fit(self, X):
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=self.min_cluster_size, min_samples=self.min_samples)
+        self.labels_ = clusterer.fit_predict(X)
+        print(f"Labels HDBSCAN générés : {set(self.labels_)}")
 
 #  Fonction pour les métriques avec gestion des erreurs
 def show_metric(labels_true, labels_pred, descriptors, name_descriptor="", name_model="kmeans"):
