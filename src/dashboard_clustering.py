@@ -8,7 +8,7 @@ st.title("Dashboard de Clustering")
 df_metric = pd.read_excel("output/save_metric.xlsx")
 
 descriptor = st.sidebar.selectbox('Sélectionner un descripteur', 
-    ["HISTOGRAM", "HOG", "HOG_DBSCAN", "HISTOGRAM_DBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN", "CNN", "CNN_DBSCAN"])
+    ["HISTOGRAM", "HOG", "HOG_DBSCAN", "HISTOGRAM_DBSCAN", "COLOR_HIST", "COLOR_HIST_DBSCAN", "CNN", "CNN_DBSCAN", "LBP", "LBP_DBSCAN"])
 
 if descriptor == "HISTOGRAM":
     df = pd.read_excel("output/save_clustering_hist_kmeans.xlsx")
@@ -26,6 +26,11 @@ elif descriptor == "CNN":
     df = pd.read_excel("output/save_clustering_cnn_kmeans.xlsx")
 elif descriptor == "CNN_DBSCAN":
     df = pd.read_excel("output/save_clustering_cnn_dbscan.xlsx")
+elif descriptor == "LBP":
+    df = pd.read_excel("output/save_clustering_lbp_kmeans.xlsx")
+elif descriptor == "LBP_DBSCAN":
+    df = pd.read_excel("output/save_clustering_lbp_dbscan.xlsx")
+
 
 selected_cluster = st.sidebar.selectbox('Sélectionner un Cluster', range(20))
 filtered_data = df[df['cluster'] == selected_cluster]
@@ -37,6 +42,11 @@ fig.add_scatter3d(x=filtered_data['x'], y=filtered_data['y'], z=filtered_data['z
 st.plotly_chart(fig)
 
 st.write("## Analyse Globale des Descripteurs")
+
+# Vérification que LBP est bien dans le fichier de métriques
+if "LBP" in df_metric['descriptor'].values:
+    st.write("### Scores du descripteur LBP")
+
 for metric in ['ami', 'ari', 'silhouette', 'homogeneity', 'completeness', 'v_measure']:
     fig = px.bar(df_metric, x='descriptor', y=metric, title=f"Score {metric} par descripteur", color='descriptor')
     st.plotly_chart(fig)
