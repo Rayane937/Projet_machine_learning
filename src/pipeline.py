@@ -11,7 +11,8 @@ from hdbscan import HDBSCAN
 from features import compute_hog_descriptors, compute_gray_histograms, compute_color_histograms, compute_cnn_descriptors, compute_lbp_descriptors
 from clustering import KMeans, show_metric  
 from utils import conversion_3d, create_df_to_export
-from constant import PATH_OUTPUT, PATH_DATA  
+from constant import PATH_OUTPUT, PATH_DATA
+from sklearn.metrics import adjusted_mutual_info_score
 
 def load_images_and_labels():
     images = []
@@ -84,6 +85,59 @@ def find_best_dbscan_params(X, labels_true, eps_list=None, min_samples_list=None
                 print(f"Test eps={eps}, min_samples={min_samples} → Ami={score:.3f}, clusters={n_clusters}, noise={n_noise}")
 
     return best_params, results
+
+
+#chercher les meilleurs parametres pour HDBSCAN
+
+
+def find_best_hdbscan_params(X, labels_true, min_cluster_size_list=None, min_samples_list=None, verbose=True):
+    if min_cluster_size_list is None:
+        min_cluster_size_list = [2, 3, 5, 10, 15, 20, 25, 30, 40, 50]
+    if min_samples_list is None:
+        min_samples_list = [None, 1, 2, 3, 5, 10, 15]
+
+    best_score = -1
+    best_params = {}
+    results = []
+
+    for min_cluster_size in min_cluster_size_list:
+        for min_samples in min_samples_list:
+            clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
+            labels = clusterer.fit_predict(X)
+
+            if len(set(labels)) <= 1 or len(set(labels)) == len(X):
+                continue  # Pas de vrai clustering
+
+            score = adjusted_mutual_info_score(labels_true, labels)
+
+            n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+            n_noise = list(labels).count(-1)
+
+            results.append({
+                'min_cluster_size': min_cluster_size,
+                'min_samples': min_samples,
+                'ami': score,
+                'clusters': n_clusters,
+                'noise': n_noise
+            })
+
+            if score > best_score:
+                best_score = score
+                best_params = {
+                    'min_cluster_size': min_cluster_size,
+                    'min_samples': min_samples,
+                    'ami': score,
+                    'labels': labels,
+                    'n_clusters': n_clusters,
+                    'n_noise': n_noise
+                }
+
+            if verbose:
+                print(f"Test min_cluster_size={min_cluster_size}, min_samples={min_samples} → "
+                      f"AMI={score:.3f}, clusters={n_clusters}, noise={n_noise}")
+
+    return best_params, results
+
 
 def pipeline():
     print("Chargement des images...")
